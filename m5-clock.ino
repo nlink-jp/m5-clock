@@ -47,6 +47,10 @@ TFT_eSprite clk_sprite = TFT_eSprite(&M5.Lcd);
 const unsigned long NTP_SYNC_INTERVAL = 3600000UL;
 unsigned long lastSyncMillis = 0;
 
+// 最終NTP同期時刻 ("HH:MM" or "--:--")
+char lastNtpSyncStr[6] = "--:--";
+bool syncInProgress = false;
+
 // SDカードから設定を読み込む関数
 bool loadConfig() {
   if (!SD.begin()) {
@@ -159,19 +163,34 @@ bool syncNtpTime() {
   M5.Rtc.SetTime(&rtc_time);
   M5.Rtc.SetDate(&rtc_date);
 
+  snprintf(lastNtpSyncStr, sizeof(lastNtpSyncStr), "%02d:%02d", rtc_time.Hours, rtc_time.Minutes);
+
   Serial.println("RTC updated successfully.");
   Serial.println(&timeinfo, "%A, %B %d %Y %H:%M:%S");
   return true;
 }
 
+// 同期中インジケーターをLCDに直接描画する
+void drawSyncIndicator(const char* msg) {
+  M5.Lcd.setTextSize(1);
+  M5.Lcd.setTextColor(TFT_DARKGREY, BLACK);
+  M5.Lcd.setCursor(220, 224);
+  M5.Lcd.printf("%-12s", msg); // 固定幅で上書き消去
+}
+
 // Wi-Fi接続してNTP同期、切断までを行う
 void syncTimeViaNtp() {
+  syncInProgress = true;
+  drawSyncIndicator("NTP syncing...");
+
   if (connectWiFi()) {
     syncNtpTime();
     WiFi.disconnect(true);
   } else {
     Serial.println("WiFi unavailable, skipping NTP sync. Using RTC.");
   }
+
+  syncInProgress = false;
   lastSyncMillis = millis();
 }
 
@@ -218,6 +237,14 @@ void displayClock() {
   clk_sprite.setTextSize(5);
   clk_sprite.setCursor(50, 130);
   clk_sprite.printf("%02d:%02d:%02d", rtc_time.Hours, rtc_time.Minutes, rtc_time.Seconds);
+
+  // 最終NTP同期時刻 (小さく右下に)
+  if (!syncInProgress) {
+    clk_sprite.setTextSize(1);
+    clk_sprite.setTextColor(TFT_DARKGREY, BLACK);
+    clk_sprite.setCursor(220, 224);
+    clk_sprite.printf("NTP %-5s", lastNtpSyncStr);
+  }
 
   // 描画内容を画面に一括転送
   clk_sprite.pushSprite(0, 0);
