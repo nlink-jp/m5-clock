@@ -278,11 +278,18 @@ void displayClock() {
   clk_sprite.setCursor(50, 130);
   clk_sprite.printf("%02d:%02d:%02d", rtc_time.Hours, rtc_time.Minutes, rtc_time.Seconds);
 
+  uint16_t dimColor = nightMode ? TFT_MAROON : TFT_DARKGREY;
+  clk_sprite.setTextSize(1);
+  clk_sprite.setTextColor(dimColor, BLACK);
+
+  // バッテリー残量 (小さく左下に)
+  float voltage = M5.Axp.GetBatVoltage();
+  int batPct = constrain((int)((voltage - 3.5f) / (4.2f - 3.5f) * 100), 0, 100);
+  clk_sprite.setCursor(4, 224);
+  clk_sprite.printf("BAT %3d%%", batPct);
+
   // 最終NTP同期時刻 (小さく右下に)
   if (!syncInProgress) {
-    uint16_t dimColor = nightMode ? TFT_MAROON : TFT_DARKGREY;
-    clk_sprite.setTextSize(1);
-    clk_sprite.setTextColor(dimColor, BLACK);
     clk_sprite.setCursor(220, 224);
     clk_sprite.printf("NTP %-5s", lastNtpSyncStr);
   }
