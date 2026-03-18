@@ -178,8 +178,9 @@ bool syncNtpTime() {
 
 // 同期中インジケーターをLCDに直接描画する
 void drawSyncIndicator(const char* msg) {
+  uint16_t color = isNightMode() ? TFT_MAROON : TFT_DARKGREY;
   M5.Lcd.setTextSize(1);
-  M5.Lcd.setTextColor(TFT_DARKGREY, BLACK);
+  M5.Lcd.setTextColor(color, BLACK);
   M5.Lcd.setCursor(220, 224);
   M5.Lcd.printf("%-12s", msg); // 固定幅で上書き消去
 }
@@ -279,8 +280,9 @@ void displayClock() {
 
   // 最終NTP同期時刻 (小さく右下に)
   if (!syncInProgress) {
+    uint16_t dimColor = nightMode ? TFT_MAROON : TFT_DARKGREY;
     clk_sprite.setTextSize(1);
-    clk_sprite.setTextColor(TFT_DARKGREY, BLACK);
+    clk_sprite.setTextColor(dimColor, BLACK);
     clk_sprite.setCursor(220, 224);
     clk_sprite.printf("NTP %-5s", lastNtpSyncStr);
   }
