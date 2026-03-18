@@ -51,6 +51,12 @@ unsigned long lastSyncMillis = 0;
 char lastNtpSyncStr[6] = "--:--";
 bool syncInProgress = false;
 
+// 表示モード
+enum DisplayMode { MODE_CLOCK, MODE_CONFIG };
+DisplayMode currentMode = MODE_CLOCK;
+unsigned long configModeMillis = 0;
+const unsigned long CONFIG_DISPLAY_TIMEOUT = 10000UL;
+
 // SDカードから設定を読み込む関数
 bool loadConfig() {
   if (!SD.begin()) {
@@ -194,6 +200,39 @@ void syncTimeViaNtp() {
   lastSyncMillis = millis();
 }
 
+// 設定画面を表示する関数
+void displayConfig() {
+  clk_sprite.fillSprite(BLACK);
+  clk_sprite.setTextColor(WHITE, BLACK);
+  clk_sprite.setTextSize(2);
+  clk_sprite.setCursor(0, 0);
+
+  clk_sprite.println("[ Config ]");
+  clk_sprite.printf("SSID : %s\n", config.ssid);
+  clk_sprite.printf("NTP  : %s\n", config.ntp_server);
+  clk_sprite.printf("TZ   : UTC+%ld\n", config.gmt_offset_sec / 3600);
+
+  if (config.static_ip_enabled) {
+    clk_sprite.printf("IP   : %s\n", config.ip);
+    clk_sprite.printf("GW   : %s\n", config.gateway);
+  } else {
+    clk_sprite.println("IP   : DHCP");
+  }
+
+  if (config.night_mode_enabled) {
+    clk_sprite.printf("Night: %d:00 - %d:00\n", config.night_start_hour, config.night_end_hour);
+  } else {
+    clk_sprite.println("Night: OFF");
+  }
+
+  clk_sprite.setTextSize(1);
+  clk_sprite.setTextColor(TFT_DARKGREY, BLACK);
+  clk_sprite.setCursor(55, 224);
+  clk_sprite.print("Press any button to close");
+
+  clk_sprite.pushSprite(0, 0);
+}
+
 // ナイトモードかどうかを判定する関数
 bool isNightMode() {
   if (!config.night_mode_enabled) return false;
@@ -291,11 +330,33 @@ void setup() {
 }
 
 void loop() {
-  if (millis() - lastSyncMillis >= NTP_SYNC_INTERVAL) {
-    syncTimeViaNtp();
+  M5.update();
+
+  if (currentMode == MODE_CLOCK) {
+    // 左ボタン: 設定画面を開く
+    if (M5.BtnA.wasPressed()) {
+      currentMode = MODE_CONFIG;
+      configModeMillis = millis();
+    }
+    // 右ボタン: 手動でNTP同期
+    if (M5.BtnC.wasPressed()) {
+      syncTimeViaNtp();
+    }
+    // 定期NTP同期
+    if (millis() - lastSyncMillis >= NTP_SYNC_INTERVAL) {
+      syncTimeViaNtp();
+    }
+    displayClock();
+
+  } else { // MODE_CONFIG
+    // いずれかのボタン or タイムアウトで時計画面に戻る
+    if (M5.BtnA.wasPressed() || M5.BtnB.wasPressed() || M5.BtnC.wasPressed() ||
+        millis() - configModeMillis >= CONFIG_DISPLAY_TIMEOUT) {
+      currentMode = MODE_CLOCK;
+    } else {
+      displayConfig();
+    }
   }
 
-  displayClock();
-  M5.update();
   delay(1000);
 }
