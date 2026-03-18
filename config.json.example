@@ -1,0 +1,25 @@
+{
+  "wifi": {
+    "ssid": "your_ssid",
+    "password": "your_password"
+  },
+  "ntp": {
+    "server": "pool.ntp.org",
+    "timezone": 9,
+    "daylight_offset_sec": 0
+  },
+  "static_ip": {
+    "enabled": false,
+    "ip": "192.168.1.123",
+    "gateway": "192.168.1.1",
+    "subnet": "255.255.255.0",
+    "dns1": "8.8.8.8"
+  },
+  "night_mode": {
+    "enabled": true,
+    "start_hour": 22,
+    "end_hour": 7,
+    "brightness": 30,
+    "day_brightness": 200
+  }
+}
