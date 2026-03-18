@@ -346,7 +346,12 @@ void loop() {
     if (millis() - lastSyncMillis >= NTP_SYNC_INTERVAL) {
       syncTimeViaNtp();
     }
-    displayClock();
+    // 1秒ごとに時計を更新
+    static unsigned long lastClockUpdate = 0;
+    if (millis() - lastClockUpdate >= 1000) {
+      lastClockUpdate = millis();
+      displayClock();
+    }
 
   } else { // MODE_CONFIG
     // いずれかのボタン or タイムアウトで時計画面に戻る
@@ -358,5 +363,5 @@ void loop() {
     }
   }
 
-  delay(1000);
+  delay(50);
 }
