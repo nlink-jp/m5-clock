@@ -19,7 +19,7 @@
     "enabled": true,
     "start_hour": 22,
     "end_hour": 7,
-    "brightness": 30,
+    "brightness": 60,
     "day_brightness": 200
   }
 }

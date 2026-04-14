@@ -35,7 +35,7 @@ auto brightness adjustment (night mode) and SD card configuration.
 
 ### SD Card Configuration
 
-Copy `config.json.example` to SD card as `/config.json` and edit:
+Copy `sdcard/config.example.json` to SD card as `/config.json` and edit:
 
 ```json
 {
@@ -59,11 +59,25 @@ Copy `config.json.example` to SD card as `/config.json` and edit:
     "enabled": true,
     "start_hour": 22,
     "end_hour": 7,
-    "brightness": 30,
+    "brightness": 60,
     "day_brightness": 200
   }
 }
 ```
+
+| Field | Default | Description |
+|-------|---------|-------------|
+| `wifi.ssid` | (empty) | WiFi SSID |
+| `wifi.password` | (empty) | WiFi password |
+| `ntp.server` | `pool.ntp.org` | NTP server |
+| `ntp.timezone` | `9` | UTC offset in hours |
+| `ntp.daylight_offset_sec` | `0` | DST offset in seconds |
+| `static_ip.enabled` | `false` | Use static IP instead of DHCP |
+| `night_mode.enabled` | `true` | Enable auto brightness |
+| `night_mode.start_hour` | `22` | Night mode start (24h) |
+| `night_mode.end_hour` | `7` | Night mode end (24h) |
+| `night_mode.brightness` | `60` | LCD brightness at night (0-255) |
+| `night_mode.day_brightness` | `200` | LCD brightness during day (0-255) |
 
 The clock works without an SD card using default settings (UTC+9, pool.ntp.org).
 
@@ -71,12 +85,24 @@ The clock works without an SD card using default settings (UTC+9, pool.ntp.org).
 
 ```
 m5-clock/
-├── m5-clock.ino         ← main sketch (setup/loop)
-├── config.h             ← build-time constants
-├── config_manager.h     ← SD card JSON config reader
-├── ntp_sync.h           ← WiFi connection + NTP sync
-└── display_manager.h    ← clock/config display (sprite double-buffered)
+├── m5-clock/
+│   ├── m5-clock.ino         ← main sketch (setup/loop)
+│   ├── config.h             ← build-time constants
+│   ├── config_manager.h     ← SD card JSON config reader
+│   ├── ntp_sync.h           ← WiFi + NTP sync (UTC internally, TZ at display)
+│   └── display_manager.h    ← clock/config display (sprite double-buffered)
+└── sdcard/
+    └── config.example.json  ← SD card config template
 ```
+
+## Technical Notes
+
+- **Time handling:** NTP syncs in UTC. Timezone offset is applied at display
+  time only, avoiding double-offset issues with M5Unified RTC.
+- **Night mode:** M5Unified correctly controls Core2 backlight brightness.
+  The legacy M5Core2.h `setBrightness()` did not work reliably.
+- **SD card:** Core2 uses GPIO4 as SD card CS pin. Explicit `SD.begin(4)`
+  is required.
 
 ## Migration from v1.x
 
