@@ -3,6 +3,7 @@
 #pragma once
 
 #include <M5Unified.h>
+#include <time.h>
 #include "config.h"
 #include "config_manager.h"
 #include "ntp_sync.h"
@@ -17,21 +18,37 @@ public:
     _sprite.createSprite(M5.Display.width(), M5.Display.height());
   }
 
-  void drawClock(const ClockConfig& cfg, const NtpSync& ntp) {
-    auto dt = M5.Rtc.getDateTime();
-    int hour = dt.time.hours;
-    int minute = dt.time.minutes;
-    int second = dt.time.seconds;
-    int year = dt.date.year;
-    int month = dt.date.month;
-    int day = dt.date.date;
-    int wday = dt.date.weekDay;
+  void drawClock(const ClockConfig& cfg, NtpSync& ntp) {
+    struct tm timeinfo;
+    int hour, minute, second, year, month, day, wday;
+
+    if (ntp.getLocalTime(timeinfo)) {
+      // NTP synced: use UTC + manual offset (avoids RTC double-offset)
+      hour = timeinfo.tm_hour;
+      minute = timeinfo.tm_min;
+      second = timeinfo.tm_sec;
+      year = timeinfo.tm_year + 1900;
+      month = timeinfo.tm_mon + 1;
+      day = timeinfo.tm_mday;
+      wday = timeinfo.tm_wday;  // 0=SUN
+    } else {
+      // Fallback to RTC (before NTP sync)
+      auto dt = M5.Rtc.getDateTime();
+      hour = dt.time.hours;
+      minute = dt.time.minutes;
+      second = dt.time.seconds;
+      year = dt.date.year;
+      month = dt.date.month;
+      day = dt.date.date;
+      wday = dt.date.weekDay;
+    }
 
     bool night = _isNightMode(cfg, hour);
     _applyBrightness(cfg, night);
 
     uint16_t textColor = night ? RED : WHITE;
-    uint16_t dimColor = night ? TFT_MAROON : TFT_DARKGREY;
+    // Footer needs to be visible even in night mode
+    uint16_t dimColor = night ? 0xC000 : TFT_DARKGREY;  // brighter dark red
 
     _sprite.fillSprite(BLACK);
     _sprite.setTextColor(textColor, BLACK);

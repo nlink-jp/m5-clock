@@ -45,12 +45,18 @@ public:
     cfg.night_mode_enabled = true;
     cfg.night_start_hour = 22;
     cfg.night_end_hour = 7;
-    cfg.night_brightness = 30;
+    cfg.night_brightness = 60;
     cfg.day_brightness = 200;
+
+    // Core2 SD card CS pin = GPIO4
+    if (!SD.begin(4)) {
+      Serial.println("[Config] SD card not found, using defaults");
+      return false;
+    }
 
     File file = SD.open(CONFIG_FILE_PATH);
     if (!file) {
-      Serial.printf("[Config] %s not found, using defaults\n", CONFIG_FILE_PATH);
+      Serial.printf("[Config] %s not found on SD, using defaults\n", CONFIG_FILE_PATH);
       return false;
     }
 

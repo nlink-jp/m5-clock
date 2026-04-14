@@ -22,6 +22,7 @@ unsigned long lastClockUpdateMs = 0;
 
 void setup() {
   auto m5cfg = M5.config();
+  m5cfg.serial_baudrate = 115200;
   M5.begin(m5cfg);
 
   Serial.println("=== M5 Clock ===");
