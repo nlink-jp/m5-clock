@@ -1,12 +1,22 @@
-# Arduino IDE の一時ファイル
+# Build artifacts
 build/
 *.elf
 *.bin
 *.hex
 *.map
 
+# Credentials (SD card config contains WiFi passwords)
+config.json
+
 # macOS
 .DS_Store
 
-# SD カードに置く設定ファイル（パスワードを含むため）
-config.json
+# Editor
+.idea/
+.vscode/
+.theia/
+*.swp
+*.swo
+
+# Claude Code
+.claude/

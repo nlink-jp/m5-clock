@@ -1,18 +1,43 @@
 # Changelog
 
-## [Unreleased]
+All notable changes to this project will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/).
+
+## [2.0.0] - 2026-04-14
+
+### Changed
+
+- Migrate from `M5Core2.h` to `M5Unified` (supports ESP32 board package v3.x)
+- Refactor single .ino into modular architecture:
+  - `config.h` — build-time constants
+  - `config_manager.h` — SD card JSON config reader
+  - `ntp_sync.h` — WiFi connection + NTP sync
+  - `display_manager.h` — clock/config display
+- Move sketch into `m5-clock/` subdirectory (Arduino convention)
+- RTC API: `M5.Rtc.SetTime/SetDate` → `M5.Rtc.setDateTime`
+- Power API: `M5.Axp.GetBatVoltage()` → `M5.Power.getBatteryLevel()`
+- Display API: `M5.Lcd` → `M5.Display`, `TFT_eSprite` → `M5Canvas`
+- ArduinoJson: `StaticJsonDocument<1024>` → `JsonDocument` (v7 compatible)
+- Config load failure no longer hangs (`while(1)`) — falls back to defaults
+
+### Added
+
+- README.ja.md (Japanese documentation)
+- AGENTS.md
 
 ## [1.0.0] - 2026-03-19
 
 ### Added
-- 日付・曜日・時刻の表示（スプライトによるちらつき防止）
-- SD カードの `config.json` から設定を読み込み
-- Wi-Fi 接続と NTP による時刻同期（起動時 + 1時間ごと）
-- Wi-Fi 接続失敗時は RTC の値でそのまま動作
-- 静的 IP アドレス設定のサポート
-- ナイトモード（時間帯による輝度自動調整・赤色表示）
-- バッテリー残量表示（左下、小表示）
-- 最終 NTP 同期時刻表示（右下、小表示）
-- NTP 同期中インジケーター
-- タッチボタン操作（左: 設定画面表示、右: 手動 NTP 同期）
-- 設定画面（Wi-Fi パスワードを除く設定内容を表示、10秒で自動クローズ）
+
+- Date, weekday, and time display (sprite double-buffered)
+- SD card `config.json` configuration
+- WiFi + NTP time sync (startup + hourly)
+- RTC fallback when WiFi unavailable
+- Static IP support
+- Night mode (time-based brightness + red text)
+- Battery percentage display
+- NTP sync indicator
+- Touch button controls (A: config, C: manual NTP sync)
+- Config display screen (10s auto-close)
