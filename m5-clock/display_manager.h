@@ -1,5 +1,9 @@
 // display_manager.h — Clock and config display for M5Stack Core2
-// Core2 has PSRAM → sprite double-buffering is safe
+// Core2 has PSRAM → sprite double-buffering is safe.
+//
+// Time source: NtpSync.getLocalTime() is the single authority. RTC is
+// already read by NtpSync.begin() to seed the system clock, so this layer
+// never needs to fall back to a raw RTC read with its own offset logic.
 #pragma once
 
 #include <M5Unified.h>
@@ -20,63 +24,58 @@ public:
 
   void drawClock(const ClockConfig& cfg, NtpSync& ntp) {
     struct tm timeinfo;
-    int hour, minute, second, year, month, day, wday;
+    bool haveTime = ntp.getLocalTime(timeinfo);
 
-    if (ntp.getLocalTime(timeinfo)) {
-      // NTP synced: use UTC + manual offset (avoids RTC double-offset)
-      hour = timeinfo.tm_hour;
-      minute = timeinfo.tm_min;
-      second = timeinfo.tm_sec;
-      year = timeinfo.tm_year + 1900;
-      month = timeinfo.tm_mon + 1;
-      day = timeinfo.tm_mday;
-      wday = timeinfo.tm_wday;  // 0=SUN
-    } else {
-      // Fallback to RTC (before NTP sync)
-      auto dt = M5.Rtc.getDateTime();
-      hour = dt.time.hours;
-      minute = dt.time.minutes;
-      second = dt.time.seconds;
-      year = dt.date.year;
-      month = dt.date.month;
-      day = dt.date.date;
-      wday = dt.date.weekDay;
-    }
-
-    bool night = _isNightMode(cfg, hour);
+    int hour = haveTime ? timeinfo.tm_hour : 0;
+    bool night = haveTime && _isNightMode(cfg, hour);
     _applyBrightness(cfg, night);
 
     uint16_t textColor = night ? RED : WHITE;
-    // Footer needs to be visible even in night mode
-    uint16_t dimColor = night ? 0xC000 : TFT_DARKGREY;  // brighter dark red
+    uint16_t dimColor  = night ? 0xC000 : TFT_DARKGREY;
 
     _sprite.fillSprite(BLACK);
     _sprite.setTextColor(textColor, BLACK);
 
-    // Date (YYYY-MM-DD)
-    _sprite.setTextSize(3);
-    _sprite.setCursor(40, 40);
-    _sprite.printf("%04d-%02d-%02d", year, month, day);
+    if (haveTime) {
+      // Date (YYYY-MM-DD)
+      _sprite.setTextSize(3);
+      _sprite.setCursor(40, 40);
+      _sprite.printf("%04d-%02d-%02d",
+                     timeinfo.tm_year + 1900,
+                     timeinfo.tm_mon + 1,
+                     timeinfo.tm_mday);
 
-    // Weekday
-    _sprite.setCursor(120, 80);
-    _sprite.print(WEEK_DAYS[wday % 7]);
+      // Weekday
+      _sprite.setCursor(120, 80);
+      _sprite.print(WEEK_DAYS[timeinfo.tm_wday % 7]);
 
-    // Time (HH:MM:SS)
-    _sprite.setTextSize(5);
-    _sprite.setCursor(50, 130);
-    _sprite.printf("%02d:%02d:%02d", hour, minute, second);
+      // Time (HH:MM:SS)
+      _sprite.setTextSize(5);
+      _sprite.setCursor(50, 130);
+      _sprite.printf("%02d:%02d:%02d",
+                     timeinfo.tm_hour,
+                     timeinfo.tm_min,
+                     timeinfo.tm_sec);
+    } else {
+      // No valid time source yet — show placeholder.
+      _sprite.setTextSize(3);
+      _sprite.setCursor(40, 40);
+      _sprite.print("----------");
+      _sprite.setCursor(120, 80);
+      _sprite.print("---");
+      _sprite.setTextSize(5);
+      _sprite.setCursor(50, 130);
+      _sprite.print("--:--:--");
+    }
 
     // Footer
     _sprite.setTextSize(1);
     _sprite.setTextColor(dimColor, BLACK);
 
-    // Battery (bottom-left)
     int batPct = _batteryPercent();
     _sprite.setCursor(4, 224);
     _sprite.printf("BAT %3d%%", batPct);
 
-    // NTP sync status (bottom-right)
     if (ntp.isSyncing()) {
       _sprite.setCursor(220, 224);
       _sprite.print("NTP syncing..");
@@ -142,9 +141,7 @@ private:
 
   int _batteryPercent() {
     int32_t level = M5.Power.getBatteryLevel();
-    if (level >= 0) return level;  // M5Unified returns 0-100 directly
-    // Fallback: voltage-based calculation
-    // (getBatteryLevel returns -1 if not supported)
+    if (level >= 0) return level;
     return 0;
   }
 };

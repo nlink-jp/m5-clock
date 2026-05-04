@@ -1,8 +1,9 @@
 // m5-clock.ino — NTP-synchronized clock for M5Stack Core2
 //
-// Displays date, weekday, and time with NTP sync and RTC backup.
-// Features night mode, battery display, and SD card configuration.
-// Uses M5Unified for cross-device compatibility.
+// Time is stored as UTC end-to-end (system clock and RTC). Timezone is
+// applied only at display time. NTP sync runs as a non-blocking state
+// machine in loop(), so the clock keeps ticking during sync. See
+// ntp_sync.h for the full convention.
 
 #include <M5Unified.h>
 #include "config.h"
@@ -33,20 +34,18 @@ void setup() {
   // Initialize display
   display.begin();
 
-  // Initial NTP sync
-  M5.Display.setTextSize(2);
-  M5.Display.fillScreen(BLACK);
-  M5.Display.setCursor(0, 0);
-  M5.Display.println("Syncing time...");
+  // Seed system clock from RTC if available, schedule first NTP sync.
+  // No blocking sync here: if RTC is invalid, the clock view shows a
+  // placeholder until the state machine completes its first sync.
+  ntp.begin(cfg);
 
-  ntp.beginSync(cfg);
-
-  // Set initial brightness
-  auto dt = M5.Rtc.getDateTime();
+  // Initial brightness from current local hour, defaulting to day if no time.
+  struct tm tinfo;
+  int hour = ntp.getLocalTime(tinfo) ? tinfo.tm_hour : 12;
   bool night = cfg.night_mode_enabled &&
     ((cfg.night_start_hour > cfg.night_end_hour)
-      ? (dt.time.hours >= cfg.night_start_hour || dt.time.hours < cfg.night_end_hour)
-      : (dt.time.hours >= cfg.night_start_hour && dt.time.hours < cfg.night_end_hour));
+      ? (hour >= cfg.night_start_hour || hour < cfg.night_end_hour)
+      : (hour >= cfg.night_start_hour && hour < cfg.night_end_hour));
   M5.Display.setBrightness(night ? cfg.night_brightness : cfg.day_brightness);
 
   Serial.println("[Main] setup complete");
@@ -56,6 +55,10 @@ void loop() {
   M5.update();
   unsigned long now = millis();
 
+  // Always step the sync state machine, including while the config view
+  // is up. update() returns immediately each iteration.
+  ntp.update(cfg);
+
   if (currentMode == MODE_CLOCK) {
     // Button A: show config
     if (M5.BtnA.wasPressed()) {
@@ -64,13 +67,10 @@ void loop() {
       display.drawConfig(cfg);
     }
 
-    // Button C: manual NTP sync
+    // Button C: schedule an immediate NTP sync (non-blocking)
     if (M5.BtnC.wasPressed()) {
       ntp.manualSync(cfg);
     }
-
-    // Periodic NTP sync
-    ntp.update(cfg);
 
     // Update clock display every second
     if (now - lastClockUpdateMs >= CLOCK_UPDATE_INTERVAL_MS) {

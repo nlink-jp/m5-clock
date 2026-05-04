@@ -97,8 +97,18 @@ m5-clock/
 
 ## Technical Notes
 
-- **Time handling:** NTP syncs in UTC. Timezone offset is applied at display
-  time only, avoiding double-offset issues with M5Unified RTC.
+- **Time handling:** Both system clock and RTC are stored as UTC end-to-end.
+  Timezone offset is applied only at display time. TZ env is pinned to
+  `UTC0` at boot, so `mktime`/`gmtime_r` are always interpreted as UTC.
+- **Boot path:** System clock is seeded from RTC immediately at startup, so
+  the clock view comes up showing the correct local time without waiting
+  for NTP. Successful NTP syncs are written back to the RTC, so the clock
+  survives power cycles.
+- **Non-blocking sync:** WiFi connect + NTP request runs as a state
+  machine driven from `loop()`; the clock keeps redrawing at 1 Hz while
+  sync is in progress, with a `NTP syncing..` indicator in the footer.
+- **Sync retry:** Failed NTP syncs retry with exponential backoff (1m, 2m,
+  4m, … capped at the regular sync interval), not the full hourly period.
 - **Night mode:** M5Unified correctly controls Core2 backlight brightness.
   The legacy M5Core2.h `setBrightness()` did not work reliably.
 - **SD card:** Core2 uses GPIO4 as SD card CS pin. Explicit `SD.begin(4)`

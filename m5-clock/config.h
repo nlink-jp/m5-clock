@@ -10,12 +10,11 @@
 // Clock update interval
 #define CLOCK_UPDATE_INTERVAL_MS 1000
 
-// WiFi connection
-#define WIFI_MAX_ATTEMPTS 20
-#define WIFI_ATTEMPT_DELAY_MS 500
+// WiFi connection timeout (state-machine sync polls until connected or timeout)
+#define WIFI_TIMEOUT_MS 10000UL
 
-// NTP timeout
-#define NTP_TIMEOUT_MS 5000
+// NTP response timeout (after configTime, polled non-blocking)
+#define NTP_TIMEOUT_MS 5000UL
 
 // Battery voltage range (Core2 LiPo)
 #define BAT_VOLTAGE_MIN 3.5f
